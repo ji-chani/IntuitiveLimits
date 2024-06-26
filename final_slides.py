@@ -22,6 +22,8 @@ class TeachingDemo(Slide):
          self.construct_objectives()
          self.construct_intro_to_limits()
          self.construct_conceptualizing_limits()
+         self.construct_limit_difference()
+         self.construct_summary()
 
     def construct_title(self):
 
@@ -101,7 +103,24 @@ class TeachingDemo(Slide):
 
         # grouping Mobjects for wipe
         self.intro_limits_group = VGroup(self.calculus, self.differential, self.integral, self.arrows, self.deriv_group, self.integ_group)
-                      
+
+        self.play(self.intro_limits_group.animate.scale(0.65))
+        self.play(self.intro_limits_group.animate.shift(UP))
+
+        rect = SurroundingRectangle(self.intro_limits_group,
+                                    color=BLACK, buff=0.5)
+        self.play(Create(rect))
+
+        # image of foundation
+        foundation = ImageMobject("foundation.png").scale(2.5).next_to(rect, DOWN, buff=0.1)
+        foundation_title = Text("Limits", font_size=self.CONTENT_FONT_SIZE).move_to(foundation.get_center())
+
+        self.play(FadeIn(foundation))
+        self.play(Write(foundation_title))
+        self.next_slide()
+
+        self.intro_limits_group = Group(self.calculus, self.differential, self.integral, self.arrows, self.deriv_group, self.integ_group, rect, foundation, foundation_title)
+
     def visualizing_derivatives(self):
         box = RoundedRectangle(corner_radius=0, color=BLACK, fill_opacity=0, height=3).move_to(self.differential.get_center() + 4.5 * RIGHT + 0.5*DOWN)
         ax = Axes(color=BLACK, x_length=box.get_right()[0]-box.get_left()[0], y_length=box.get_top()[1]-box.get_bottom()[1], tips=False,
@@ -186,7 +205,7 @@ class TeachingDemo(Slide):
         ax.get_y_axis().numbers.set_color(BLACK)
         function = ax.plot(lambda x: x**2+x+1, x_range=[-2,2,1], color=WHITE)
         graph1 = ax.plot(lambda x: (x**3-1)/(x-1), x_range=[-2, 0.97, 1], color=BLUE)
-        graph2 = ax.plot(lambda x: (x**3-1)/(x-1), x_range=[1.03, 2, 0.1], color=BLUE)
+        graph2 = ax.plot(lambda x: (x**3-1)/(x-1), x_range=[1.03, 2, 0.05], color=BLUE)
         break_point = Circle(radius=0.10, color=BLUE).move_to(ax.c2p(1,3))
         func_graph = VGroup(graph1, break_point, graph2)
         self.play(Create(ax), Create(func_graph))
@@ -200,7 +219,7 @@ class TeachingDemo(Slide):
         self.play(Circumscribe(x_limit, color=RED))
         self.next_slide()
 
-        # (2.4) Moving line and points
+        # (2.4) Moving line, points, and value
         t = ValueTracker(0.1)
         moving_dot = always_redraw(
             lambda: Dot(color=BLACK).move_to(
@@ -218,20 +237,204 @@ class TeachingDemo(Slide):
                 ax.c2p(0, function.underlying_function(t.get_value()))
             )
         )
-        updating_lines_and_points = VGroup(moving_dot, dotted_lines, moving_xmark)
+        updating_value = always_redraw(
+            lambda: DecimalNumber(num_decimal_places=2, font_size=1.5*self.SUBTITLE_FONT_SIZE, color=BLACK)
+            .set_value(t.get_value())
+            .move_to(ax.c2p(t.get_value()-0.25, 0.25))
+        )
+        updating_lines_and_points = VGroup(moving_dot, dotted_lines, moving_xmark, updating_value)
 
         self.play(Create(updating_lines_and_points))
         self.next_slide()
         
-        # from the left
-        self.play(t.animate.set_value(0.5))
-        self.wait(0.5)
-        self.play(t.animate.set_value(0.95))
+        ## from the left
+        self.play(t.animate.set_value(0.95), run_time=5)
         self.next_slide()
 
-        # from the right
-        self.play(t.animate.set_value())
+        ## from the right
+        self.play(t.animate.set_value((np.sqrt(21)-1)/2))
+        self.next_slide()
+        self.play(t.animate.set_value(1.05), run_time=5)
+        self.next_slide()
 
+        y_limit = ax.get_y_axis().numbers[2]
+        self.play(Circumscribe(y_limit, color=RED))
+        self.next_slide()
+
+        # (2.5) Graphical limit
+        therefore = Text("Therefore", font_size=self.SUBTITLE_FONT_SIZE)
+        graphical_limit = MathTex(r"\lim_{x\to1}f(x) = 3", 
+                                font_size=1.5*self.SUBTITLE_FONT_SIZE)
+        graphical_limit = VGroup(therefore, graphical_limit).arrange(DOWN, buff=0.5).move_to(ax.c2p(2.5,4))
+        self.play(Write(graphical_limit))
+        self.next_slide()
+
+        self.graphical_objects = VGroup(self.header_graphical,
+                                        texts, t2,
+                                        ax, func_graph,
+                                        updating_lines_and_points,
+                                        graphical_limit)
+
+        # (3.1) Analytical Approach 
+        self.header_analytical = Text("Analytical Approach", font_size=self.CONTENT_FONT_SIZE).to_corner(UL)
+        ul = Underline(self.header_analytical, color=BLACK)
+        self.header_analytical = VGroup(self.header_analytical, ul)
+        self.wipe(self.graphical_objects, self.header_analytical)
+        self.next_slide()
+
+        self.texts = texts.copy()
+        self.play(Write(self.texts), run_time=0.5)
+        self.next_slide()
+
+        # appearing values in table of values
+        self.table_of_values()
+
+        analytical_limit = graphical_limit.copy().next_to(texts, RIGHT).shift(RIGHT)
+        self.play(Write(analytical_limit))
+        self.next_slide()
+
+        self.analytical_objects = VGroup(self.header_analytical, 
+                                        self.texts, 
+                                        self.table, 
+                                        analytical_limit)
+
+
+    def table_of_values(self):
+        table = DecimalTable(
+            [[0.90, 0.99, 0.999, 0.9999, 1.0001, 1.001, 1.01, 1.1],
+            [2.7100, 2.9701, 2.9970, 2.9997, 3.0003, 3.0030, 3.3031, 3.31]],
+            row_labels=[MathTex(r"x"), MathTex(r"f(x)")],
+            element_to_mobject_config={"num_decimal_places": 4, "color": BLACK,
+                                        "font_size": 0.75*48},
+            line_config={"color": BLACK},
+            include_outer_lines=True,
+            h_buff=1
+        ).scale(0.7).to_edge(DOWN).shift(0.75*UP)
+
+        left_x = table.get_rows()[0][1:5]
+        right_x = table.get_rows()[0][5:]
+        left_y = table.get_rows()[1][1:5]
+        right_y = table.get_rows()[1][5:]
+        for values in [left_x, right_x, left_y, right_y]:
+            values.set_color(WHITE)
+
+        self.play(Create(table))
+        self.next_slide()
+        self.play(left_x.animate.set_color(BLACK))
+        self.next_slide()
+        
+        self.play(left_y[0].animate.set_color(BLACK))
+        self.next_slide()
+        self.play(left_y[1].animate.set_color(BLACK))
+        self.next_slide()
+        self.play(left_y[2].animate.set_color(BLACK))
+        self.next_slide()
+        self.play(left_y[3].animate.set_color(BLACK))
+        self.next_slide()
+        
+        for mobj in right_x[::-1]:
+            self.play(mobj.animate.set_color(BLACK), run_time=2/len(right_x))
+        self.next_slide()
+
+        for i in reversed(range(4)):
+            self.play(right_y[i].animate.set_color(BLACK), run_time=1)
+        self.next_slide()
+
+        self.table = table
+
+    def construct_limit_difference(self):
+        # How Limits is Different
+        # (1) Title
+        self.subtitle3 = Text("How Limits is Different", font_size=self.TITLE_FONT_SIZE).center()
+        self.wipe(self.analytical_objects, self.subtitle3)
+        self.next_slide()
+
+        t1 = Text("Examine the function", font_size=self.SUBTITLE_FONT_SIZE)
+        eqn = MathTex(r"f(x) = \frac{x^3-1}{x-1}, \quad -2 \leq x \leq 2", 
+                        font_size=1.5*self.SUBTITLE_FONT_SIZE).next_to(t1, DOWN)
+        texts = VGroup(t1, eqn).arrange(DOWN, buff=0.5).to_corner(UL)
+        t2 = Tex(r"The function is rational and is \\ undefined at $x=1$",
+                    font_size=self.CONTENT_FONT_SIZE).next_to(texts, DOWN, buff=0.5)
+
+        self.wipe(self.subtitle3, texts)
+        self.next_slide()
+        self.play(Write(t2), run_time=0.5)
+        self.next_slide()
+
+        # Showing Graph
+        ax = Axes(x_range=[-3, 3, 1], y_range=[0, 6, 1],
+                    tips=False).to_edge(RIGHT)
+        ax.get_x_axis().numbers.set_color(BLACK)
+        ax.get_y_axis().numbers.set_color(BLACK)
+        graph1 = ax.plot(lambda x: (x**3-1)/(x-1), x_range=[-2, 0.97, 1], color=BLUE)
+        graph2 = ax.plot(lambda x: (x**3-1)/(x-1), x_range=[1.03, 2, 0.05], color=BLUE)
+        break_point = Circle(radius=0.10, color=BLUE).move_to(ax.c2p(1,3))
+        func_graph = VGroup(graph1, break_point, graph2)
+
+        self.play(Create(ax), Create(func_graph))
+        self.next_slide()
+
+        # Indicating Hole and Limit
+        self.play(Indicate(break_point, color=RED, scale_factor=2))
+        self.next_slide()
+
+        still = Text("Still", font_size=self.SUBTITLE_FONT_SIZE)
+        limit = MathTex(r"\lim_{x\to1}f(x) = 3", 
+                                font_size=1.5*self.SUBTITLE_FONT_SIZE)
+        limit = VGroup(still, limit).arrange(DOWN, buff=0.5).move_to(ax.c2p(2.5,4))
+        self.play(Write(limit))
+        self.next_slide()
+
+        self.limit_difference_objects = VGroup(texts, t2,
+                                                ax, func_graph,
+                                                limit)
+
+        # Conclusion
+        conc1 = Text(f"Limits do not care whether a function is defined \n or not at a particular point.",
+                            font_size=0.7 * 48, slant=ITALIC)
+        conc2 = Text(f"What matters to Limits is what value the function \n (or output) is approaching to as we approach the \n input value to the point we are concerned with.",
+                            font_size=0.7 * 48,
+                            t2c={"what value the function": RED_E,
+                                "(or output) is approaching to as we approach the": RED_E,
+                                "input value to the point": RED_E},
+                            t2s={"what value the function": ITALIC,
+                                "(or output) is approaching to as we approach the": ITALIC,
+                                "input value to the point": ITALIC})
+        self.conclusion = VGroup(conc1, conc2).arrange(DOWN, buff=1, aligned_edge=LEFT)
+
+        self.wipe(self.limit_difference_objects, conc1)
+        self.next_slide()
+        
+        self.play(Write(conc2), run_time=0.5)
+        self.next_slide()
+
+    def construct_summary(self):
+        summary_title = Text("Summary", font_size=self.TITLE_FONT_SIZE).center()
+
+        self.wipe(self.conclusion, summary_title)
+        self.next_slide()
+
+        header_recap = Text("To recap ...", font_size=self.TITLE_FONT_SIZE).to_corner(UL)
+        self.wipe(summary_title, header_recap)
+        self.next_slide()
+
+        bullets = Paragraph("• Limits is the foundation of Calculus.",
+                            "• Limits can be conceptualized intuitively using graphical and \n   analytical approach.",
+                            "• In both methods, the approached limit is the same.",
+                            "• Limits are only concerned with approaching values, not at \n   the exact defined point.",
+                            font_size=self.CONTENT_FONT_SIZE,
+                            line_spacing=1)
+        bullets.align_to(header_recap, LEFT)
+        self.play(FadeIn(bullets.chars[0]))
+        self.next_slide()
+        self.play(FadeIn(bullets.chars[1:3]))
+        self.next_slide()
+        self.play(FadeIn(bullets.chars[3]))
+        self.next_slide()
+        self.play(FadeIn(bullets.chars[4:6]))
+        self.next_slide()
+
+        self.summary_objects = VGroup(header_recap, bullets)
 
 def paragraph(*strs, alignment=LEFT, direction=DOWN, **kwargs):
         texts = VGroup(*[Text(s, **kwargs) for s in strs]).arrange(direction)
@@ -241,3 +444,6 @@ def paragraph(*strs, alignment=LEFT, direction=DOWN, **kwargs):
                 text.align_to(texts[0], direction=alignment)
 
         return texts
+
+
+
